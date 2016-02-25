@@ -517,6 +517,8 @@ class ProtobufParser
             ->append('}');
 
         foreach ($fields as $field) {
+            echo "CHECK " . $field->getName() . ", " . $field->getTypeName() . PHP_EOL;
+            
             if (!$field->isScalarType() && !generateForClass($field->getTypeName())) {
                 continue;
             }
@@ -794,6 +796,7 @@ class ProtobufParser
     {
 
         foreach ($fields as $field) {
+            echo "CHECK " . $field->getName() . ", " . $field->getTypeName() . PHP_EOL;
             if (!$field->isScalarType() && !generateForClass($field->getTypeName())) {
                 continue;
             }

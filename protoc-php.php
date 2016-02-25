@@ -1,4 +1,4 @@
-#!/usr/bin/php5
+#!/usr/bin/php
 <?php
 require 'ProtobufCompiler/ProtobufParser.php';
 
@@ -29,7 +29,11 @@ if (!debug_backtrace()) {
             return true;
         }
 
-        echo "Gen for class: " . $name . PHP_EOL;
+        //echo "Gen for class: " . $name . PHP_EOL;
+
+        if ($name == "int") {
+            return true;
+        }
 
         return in_array($name, $outputClasses);
     }

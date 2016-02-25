@@ -1,6 +1,6 @@
 <?php
-require_once 'output/set_skip_foo.php';
-require_once 'output/set_skip_result.php';
+require_once 'output/pb_proto_foo.php';
+require_once 'output/pb_proto_result.php';
 
 $res = new ResultA();
 $res->set(ResultA::URL, "http://www.test.nl");
