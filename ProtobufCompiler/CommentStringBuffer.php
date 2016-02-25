@@ -64,8 +64,12 @@ class CommentStringBuffer extends CodeStringBuffer
      */
     public function __toString()
     {
-        return '/**' . $this->newLineStr .
-            parent::__toString() .
-            $this->newLineStr . ' */';
+        if (isOutputCompact()) {
+            return '';
+        } else {
+            return '/**' . $this->newLineStr .
+                parent::__toString() .
+                $this->newLineStr . ' */';
+        }
     }
 }

@@ -1,3 +1,4 @@
+#!/usr/bin/php5
 <?php
 require 'ProtobufCompiler/ProtobufParser.php';
 
@@ -15,12 +16,42 @@ if (!debug_backtrace()) {
     $useNamespaces = false;
     $filenamePrefix = false;
     $outputPsr = false;
+
+    /* NEW COMPACT STUFF */
+    $outputCompact = false;
+    $outputClasses = array();
+    $outputSkipAccessors = false;
+
+    function generateForClass($name) {
+        global $outputClasses;
+
+        if (count($outputClasses) == 0) {
+            return true;
+        }
+
+        echo "Gen for class: " . $name . PHP_EOL;
+
+        return in_array($name, $outputClasses);
+    }
+
+    function isOutputCompact() {
+        global $outputCompact;
+
+        return $outputCompact;
+    }
+
+    function isOutputSkipAccessors() {
+        global $outputSkipAccessors;
+
+        return $outputSkipAccessors;
+    }
+
     $targetDir = false;
 
     $iterator = new \RegexIterator(new \ArrayIterator($argv), '/^-/');
 
     $shortOpts = "np:t:";
-    $longOpts = array("use-namespaces", "filename-prefix:", "psr");
+    $longOpts = array("use-namespaces", "filename-prefix:", "psr", "compact", "classes:", "skipAccessors");
 
     $options = getOpt($shortOpts, $longOpts);
 
@@ -40,6 +71,15 @@ if (!debug_backtrace()) {
             case 'psr':
                 $outputPsr = true;
                 break;
+            case 'compact':
+                $outputCompact = true;
+                break;
+            case 'skipAccessors':
+                $outputSkipAccessors = true;
+                break;
+            case 'classes':
+                $outputClasses = explode(",", $value);
+                break;
             case 't':
                 $targetDir = rtrim($value, '/') . '/';
                 break;
@@ -58,20 +98,23 @@ if (!debug_backtrace()) {
         }
 
         // Look for remaining occurrences of -o <val> (space in between):
-        while ($matches = preg_grep("/--?$key/", $GLOBALS['argv'])) {
-            foreach ($matches as $key => $match) {
-                unset($GLOBALS['argv'][$key]);
-                unset($GLOBALS['argv'][$key + 1]);
+        while ($matches = preg_grep("/^--?$key$/", $GLOBALS['argv'])) {
+            foreach ($matches as $key2 => $match) {
+                unset($GLOBALS['argv'][$key2]);
+                unset($GLOBALS['argv'][$key2 + 1]);
             }
         }
     }
 
-    if ($optionError || count($argv) != 2) {
+    if ($optionError || count($argv) < 2) {
+	var_dump($argv);
         printf('USAGE: %s [OPTIONS] PROTO_FILE' . PHP_EOL, $argv[0]);
         printf('  -n, --use-namespaces              Use native PHP namespaces' . PHP_EOL);
         printf('  -p, --filename-prefix [PREFIX]    Specify a prefix for generated file names' . PHP_EOL);
         printf('  -t [path]                         Target directory for output' . PHP_EOL);
         printf('  --psr                             Output class files in a psr-4 directory structure' . PHP_EOL);
+        printf('  --compact                         Compact code generation' . PHP_EOL);
+        printf('  --classes [classes]               Only generate code for classes (comma separated)' . PHP_EOL); 
         exit(1);
     }
 

@@ -52,8 +52,10 @@ class CodeStringBuffer
             }
         }
 
-        if ($newline) {
-            $this->_buffer[] = $this->newLineStr;
+        global $outputCompact;
+
+        if (!$outputCompact && $newline) {
+           $this->_buffer[] = $this->newLineStr;
         }
 
         return $this;
@@ -92,7 +94,13 @@ class CodeStringBuffer
      */
     private function _getIdentationString($identOffset = 0)
     {
-        return str_repeat($this->identStr, $this->_identLevel + $identOffset);
+        global $outputCompact;
+
+        if ($outputCompact) { 
+            return ''; 
+        } else {
+            return str_repeat($this->identStr, $this->_identLevel + $identOffset);
+        }
     }
 
     /**
@@ -102,7 +110,13 @@ class CodeStringBuffer
      */
     public function __toString()
     {
-        return implode($this->newLineStr, $this->_buffer);
+        global $outputCompact;
+
+        if ($outputCompact) {
+            return implode('', $this->_buffer);
+        } else {
+            return implode($this->newLineStr, $this->_buffer);
+        }
     }
 }
 

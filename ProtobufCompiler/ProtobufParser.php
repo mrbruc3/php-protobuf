@@ -290,11 +290,13 @@ class ProtobufParser
 
         $requiresString = '';
 
-        foreach ($file->getDependencies() as $dependency) {
-            $requiresString .= sprintf(
-                'require_once \'%s\';',
-                $this->_createOutputFilename($dependency->getName())
-            );
+        if(!isOutputCompact()) {
+            foreach ($file->getDependencies() as $dependency) {
+                $requiresString .= sprintf(
+                    'require_once \'%s\';',
+                    $this->_createOutputFilename($dependency->getName())
+                );
+            }
         }
 
         if ($this->_useNativeNamespaces && !empty($requiresString)) {
@@ -508,13 +510,17 @@ class ProtobufParser
             ->newline()
             ->appendParam('return', 'array');
 
-        $buffer->append($comment)
-            ->append('public function fields()')
+       $buffer->append($comment)
+            ->append('function fields()')
             ->append('{')
             ->append('return self::$fields;', false, 1)
             ->append('}');
 
         foreach ($fields as $field) {
+            if (!$field->isScalarType() && !generateForClass($field->getTypeName())) {
+                continue;
+            }
+
             if ($field->isRepeated()) {
                 $this->_describeRepeatedField($field, $buffer);
             } else {
@@ -534,6 +540,10 @@ class ProtobufParser
     private function _describeRepeatedField(
         FieldDescriptor $field, CodeStringBuffer $buffer
     ) {
+        if(isOutputSkipAccessors()) {
+            return;
+        }
+
         if ($field->isProtobufScalarType() || $field->getTypeDescriptor() instanceof EnumDescriptor) {
             $typeName = $field->getTypeName();
             $argumentClass = '';
@@ -552,7 +562,7 @@ class ProtobufParser
         $buffer->newline()
             ->append($comment)
             ->append(
-                'public function append' . $field->getCamelCaseName() . '(' . $argumentClass . '$value)'
+                'function append' . $field->getCamelCaseName() . '(' . $argumentClass . '$value)'
             )
             ->append('{')
             ->append(
@@ -569,7 +579,7 @@ class ProtobufParser
 
         $buffer->newline()
             ->append($comment)
-            ->append('public function clear' . $field->getCamelCaseName() . '()')
+            ->append('function clear' . $field->getCamelCaseName() . '()')
             ->append('{')
             ->append(
                 'return $this->clear(self::' . $field->getConstName() . ');',
@@ -585,7 +595,7 @@ class ProtobufParser
 
         $buffer->newline()
             ->append($comment)
-            ->append('public function get' . $field->getCamelCaseName() . '()')
+            ->append('function get' . $field->getCamelCaseName() . '()')
             ->append('{')
             ->append(
                 'return $this->get(self::' . $field->getConstName() . ');',
@@ -602,7 +612,7 @@ class ProtobufParser
         $buffer->newline()
             ->append($comment)
             ->append(
-                'public function get' . $field->getCamelCaseName() . 'Iterator()'
+                'function get' . $field->getCamelCaseName() . 'Iterator()'
             )
             ->append('{')
             ->append(
@@ -626,7 +636,7 @@ class ProtobufParser
         $buffer->newline()
             ->append($comment)
             ->append(
-                'public function get' . $field->getCamelCaseName() . 'At($offset)'
+                'function get' . $field->getCamelCaseName() . 'At($offset)'
             )
             ->append('{')
             ->append(
@@ -644,7 +654,7 @@ class ProtobufParser
 
         $buffer->newline()
             ->append($comment)
-            ->append('public function get' . $field->getCamelCaseName() . 'Count()')
+            ->append('function get' . $field->getCamelCaseName() . 'Count()')
             ->append('{')
             ->append(
                 'return $this->count(self::' . $field->getConstName() . ');',
@@ -673,6 +683,10 @@ class ProtobufParser
             $argumentClass = $typeName . ' ';
         }
 
+        if(isOutputSkipAccessors()) {
+            return;
+        }
+
         $comment = new CommentStringBuffer(self::TAB, self::EOL);
 
         $comment->append(
@@ -689,7 +703,7 @@ class ProtobufParser
         $buffer->newline()
             ->append($comment)
             ->append(
-                'public function set' . $field->getCamelCaseName() .
+                'function set' . $field->getCamelCaseName() .
                 '(' . $argumentClass . '$value)'
             )
             ->append('{')
@@ -708,7 +722,7 @@ class ProtobufParser
 
         $buffer->newline()
             ->append($comment)
-            ->append('public function get' . $field->getCamelCaseName() . '()')
+            ->append('function get' . $field->getCamelCaseName() . '()')
             ->append('{')
             ->append(
                 'return ' .
@@ -744,7 +758,7 @@ class ProtobufParser
             ->appendParam('return', 'int[]');
 
         $buffer->append($comment)
-            ->append('public function getEnumValues()')
+            ->append('function getEnumValues()')
             ->append('{');
 
         if ($this->_hasSplTypes) {
@@ -756,7 +770,7 @@ class ProtobufParser
                 ->increaseIdentation();
 
             foreach ($enums as $enum) {
-                $buffer->append('\'' . $enum->getName() . '\' => self::' . $enum->getName() . ',');
+                $buffer->append('\'' . $enum->getName() . '\'=>self::' . $enum->getName() . ',');
             }
 
             $buffer->decreaseIdentation()
@@ -778,9 +792,12 @@ class ProtobufParser
      */
     private function _createClassConstructor($fields, CodeStringBuffer $buffer)
     {
-        $buffer->append('/* Field index constants */');
 
         foreach ($fields as $field) {
+            if (!$field->isScalarType() && !generateForClass($field->getTypeName())) {
+                continue;
+            }
+
             $buffer->append(
                 'const ' . $field->getConstName() .
                 ' = ' . $field->getNumber() . ';'
@@ -789,53 +806,60 @@ class ProtobufParser
 
         $buffer->newline();
 
-        $buffer->append('/* @var array Field descriptors */')
+        if(!isOutputCompact()) {
+            $buffer->append('/* @var array Field descriptors */');
+        }
+
+        $buffer
             ->append('protected static $fields = array(')
             ->increaseIdentation();
 
         foreach ($fields as $field) {
-            $type = $this->_getType($field);
+            if (!$field->isScalarType() && !generateForClass($field->getTypeName())) {
+                continue;
+            }
 
-            $buffer->append('self::' . $field->getConstName() . ' => array(')
+            $type = $this->_getType($field);
+            $buffer->append('self::' . $field->getConstName() . '=>array(')
                 ->increaseIdentation();
 
             if (!is_null($field->getDefault())) {
                 if ($type == ProtobufMessage::PB_TYPE_STRING) {
                     $buffer->append(
-                        '\'default\' => \'' .
+                        '\'default\'=>\'' .
                         addslashes($field->getDefault()) . '\', '
                     );
                 } else {
                     if ($field->isProtobufScalarType()) {
                         $buffer->append(
-                            '\'default\' => ' . $field->getDefault() . ', '
+                            '\'default\'=>' . $field->getDefault() . ', '
                         );
                     } else {
                         $className = $this->_createClassName($field->getTypeDescriptor());
                         $buffer->append(
-                            '\'default\' => ' . $className . '::' . $field->getDefault() . ', '
+                            '\'default\'=>' . $className . '::' . $field->getDefault() . ', '
                         );
                     }
                 }
             }
 
             $buffer->append(
-                '\'name\' => \'' . addslashes($field->getName()) . '\'' . ','
+                '\'name\'=>\'' . addslashes($field->getName()) . '\'' . ','
             );
 
             if (!$field->isRepeated()) {
                 $buffer->append(
-                    '\'required\' => ' .
+                    '\'required\'=>' .
                     ($field->isOptional() ? 'false' : 'true') . ','
                 );
             } else {
-                $buffer->append('\'repeated\' => true,');
+                $buffer->append('\'repeated\'=>true,');
             }
 
             if (is_int($type)) {
-                $buffer->append('\'type\' => ' . $type . ',');
+                $buffer->append('\'type\'=>' . $type . ',');
             } else {
-                $buffer->append('\'type\' => \'' . $type . '\'');
+                $buffer->append('\'type\'=>\'' . $type . '\'');
             }
 
             $buffer->decreaseIdentation();
@@ -852,9 +876,8 @@ class ProtobufParser
         )
             ->newline()
             ->appendParam('return', 'null');
-
         $buffer->append($comment)
-            ->append('public function __construct()')
+            ->append('function __construct()')
             ->append('{')
             ->increaseIdentation()
             ->append('$this->reset();')
@@ -868,11 +891,15 @@ class ProtobufParser
             ->appendParam('return', 'null');
 
         $buffer->append($comment)
-            ->append('public function reset()')
+            ->append('function reset()')
             ->append('{')
             ->increaseIdentation();
 
         foreach ($fields as $field) {
+            if (!$field->isScalarType() && !generateForClass($field->getTypeName())) {
+                continue;
+            }
+
             $type = $this->_getType($field);
 
             if ($field->isRepeated()) {
@@ -1000,6 +1027,9 @@ class ProtobufParser
                 } else {
                     $pbp = self::$_parsers[$parserKey];
                 }
+
+                $pbp->setTargetDir($this->getTargetDir());
+                $pbp->setFilenamePrefix($this->getFilenamePrefix());
 
                 $file->addDependency($pbp->parse($includedFilename));
 
