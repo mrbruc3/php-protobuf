@@ -1,6 +1,23 @@
 message Foo
 {
-	required int32 bar = 1;
+	required int32 bar = 1 [default = 10];
 	optional string baz = 2;
 	repeated float spam = 3;
+        optional ResultA resultA = 4;
+        optional ResultB resultB = 5;
+
+
+enum Corpus {
+    UNIVERSAL = 0;
+    WEB = 1;
+    IMAGES = 2;
+    LOCAL = 3;
+    NEWS = 4;
+    PRODUCTS = 5;
+    VIDEO = 6;
+  }
+  optional Corpus corpus = 4 [default = UNIVERSAL];
 }
+
+import "result.proto";
+
