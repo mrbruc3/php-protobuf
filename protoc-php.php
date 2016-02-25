@@ -107,14 +107,14 @@ if (!debug_backtrace()) {
     }
 
     if ($optionError || count($argv) < 2) {
-	var_dump($argv);
         printf('USAGE: %s [OPTIONS] PROTO_FILE' . PHP_EOL, $argv[0]);
         printf('  -n, --use-namespaces              Use native PHP namespaces' . PHP_EOL);
         printf('  -p, --filename-prefix [PREFIX]    Specify a prefix for generated file names' . PHP_EOL);
         printf('  -t [path]                         Target directory for output' . PHP_EOL);
         printf('  --psr                             Output class files in a psr-4 directory structure' . PHP_EOL);
         printf('  --compact                         Compact code generation' . PHP_EOL);
-        printf('  --classes [classes]               Only generate code for classes (comma separated)' . PHP_EOL); 
+        printf('  --classes [classes]               Only generate code for specified classes (comma separated)' . PHP_EOL);
+        printf('  --skipAccessors                   Do not generate setters, appenders and getters for fields' . PHP_EOL);
         exit(1);
     }
 
